@@ -7,11 +7,9 @@ define([
         window.webkitRequestAnimationFrame || 
         window.msRequestAnimationFrame ||
         function(callback) { 
-       		var _callback = function() {
+        	setTimeout(function() {
 	        	callback(+new Date());
-	        };
-
-        	setTimeout(_callback, 50); 
+	        }, 1000.0 / 60); 
         };
 
 	var frame = function(callback) {

@@ -1,7 +1,7 @@
 define([
 	'underscore',
 	'Events',
-	'utils/timer',
+	'utils/timer'
 ], function(_, Events, Timer) {
 	function Model() {
 		this._uid = _.uniqueId('c');
@@ -12,6 +12,7 @@ define([
 		};
 
 		this.initialize.apply(this, arguments);
+		this.invalidate();
 	}
 
 	_.extend(Model.prototype, Events);
@@ -24,7 +25,7 @@ define([
 		return this.attributes[attr];
 	};
 
-	Model.prototype.set = function(key, value) {
+	Model.prototype.set = function(key, value, options) {
 		var attr = {};
 		if (key == null) return this;
 
@@ -32,7 +33,10 @@ define([
 			attr[key] = value;	
 		} else {
 			attr = key;
+			options = value;
 		}
+
+		options || (options = {});
 
 		_.each(attr, function(value, key) {
 			if(key !== 'uid') {
@@ -42,7 +46,7 @@ define([
 			}	
 		}, this);
 
-		this.invalidate();
+		if(options.forceInvalidate) this.invalidate();
 
 		return this;
 	};
@@ -64,9 +68,11 @@ define([
 
 			Timer.registerNextFrame(_.bind(function(t) {
 				this.isInvalidate = false;
-				this.render(t);		
+				this.render(t);
 			}, this));	
 		}		
+
+		return this;
 	};
 
 	// Helper function to correctly set up the prototype chain, for subclasses.

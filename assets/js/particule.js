@@ -2,120 +2,122 @@ define([
 	'underscore',
 	'Model',
 	'utils/random',
+	'utils/window',
 	'css/transform',
 	'easing'
-], function(_, Model, Random, tranformElement, Easing) {
-	var PIC_HEIGHT = 90,
-		PIC_WIDTH = 60,
-		HEIGHT = 400, WIDTH = 1000,
+], function(_, Model, Random, w, tranformElement, Easing) {
+	var PIC_HEIGHT = 170,
+		PIC_WIDTH = 125,
+		HEIGHT = w.height, 
+		WIDTH = w.width,
+		PIC_PER_LINE = parseInt(WIDTH / PIC_WIDTH),
+		SPACE = (WIDTH - PIC_WIDTH * PIC_PER_LINE) / (PIC_PER_LINE + 1),
 		TWO_PI = 2 * Math.PI;
+
+	var count = 0;
 
 	var Particule = Model.extend({
 		initialize: function() {
 			var container = document.getElementById('container');
-	    	var s = document.createElement('div');
+	    	var item = document.createElement('div');
+	    	var text = document.createElement('div');
+	    	var c = count++;
 
-			s.style.height = PIC_HEIGHT + "px";
-			s.style.width = PIC_WIDTH + "px";
-			s.style.position = "fixed";
-			s.style['background-color'] = Random.color();
+	    	item.className = "surface periodic-item";
+	    	item.style['background-color'] = Random.color();
+	    	text.className = "symbol";
+	    	text.appendChild(document.createTextNode(c));
 
-			container.appendChild(s);
+	    	item.appendChild(text);
+			container.appendChild(item);
 
 			this.set({
-				x: Random.number(WIDTH),
-				y: Random.number(HEIGHT),
-				deltaZ: 0,
+				el: item,
+				count: c,
 
-				tetaX: 0,
-				speedX: Random.number(-10, 10) / 100.0,
-				tetaY: 0,
-				speedY: Random.number(-10, 10) / 100.0,
-				tetaZ: 0,
-				speedZ: Random.number(-10, 10) / 100.0,
-
-				easingDuration: 0,
-				easingStart: 0,
-
-				el: s,
+				position: {
+					x: Random.number(WIDTH),
+					y: Random.number(HEIGHT),
+					z: 0,
+					alpha: 0,
+					teta: 0,
+					phi: 0			
+				},
+				easing: {
+					start: 0,
+					duration: 5000,
+					startX: SPACE,
+					startY: 10,
+					endX: SPACE + (c % PIC_PER_LINE) * (PIC_WIDTH + SPACE), 
+					endY: 10 + parseInt(c / PIC_PER_LINE) * (PIC_HEIGHT + 10)
+				}
 			});
 
-			this.set('endX', this.get('x'));
-			this.set('endY', this.get('y'));
+			w.on('resize', _.bind(this.onresize, this));
 
 			return this;
 	    },
 
-	    render: function(timestamp) {
-			var dx = this.get('x'),
-				dy = this.get('y'),
-				tetaX = this.get('tetaX'),
-				tetaY = this.get('tetaY'),
-				tetaZ = this.get('tetaZ'),
+	    render: function(t) {	
+	    	var p = this.get('position'),
+	    		force = this.easing(t, p, this.get('easing'));
 
-				startX = this.get('startX'),
-				startY = this.get('startY'),
-				endX = this.get('endX'),
-				endY = this.get('endY'),
-
-				easingDuration = this.get('easingDuration'),
-				easingStart = this.get('easingStart'),
-
-				tick = this.get('_previousTick') || 0,
-				speed = (tick - (timestamp || tick)) / 100.0;
-
-			if(timestamp > easingStart + easingDuration) {
-				startX = endX;
-				startY = endY;
-				endX = Random.number(0, WIDTH);
-				endY = Random.number(0, HEIGHT);
-				easingStart = timestamp;
-				easingDuration = Random.number(2000, 5000);
-			}
-
-			var delta = Easing.ellipse(
-				WIDTH / 2 - PIC_WIDTH / 2, 
-				HEIGHT / 2 - PIC_HEIGHT / 2, 
-				WIDTH / 2 - PIC_WIDTH / 2 - 10, 
-				HEIGHT / 2 - PIC_HEIGHT / 2 - 10, 
-				timestamp - easingStart, 
-				easingDuration
+			tranformElement(
+				this.get('el'), 
+				p.x, p.y, p.z, 
+				p.alpha, p.teta, p.phi
 			);
-			dx = delta.x;
-			dy = delta.y;
 
-			tetaX += this.get('speedX') * speed;
-			tetaY += this.get('speedY') * speed;
-			tetaZ += this.get('speedZ') * speed;	
-
-			if(tetaX > TWO_PI) tetaX -= TWO_PI;
-			if(tetaY > TWO_PI) tetaY -= TWO_PI;
-			if(tetaZ > TWO_PI) tetaZ -= TWO_PI;
-
-			this.set({
-				'_previousTick': timestamp || tick,
-
-				'x': dx,
-				'y': dy,
-
-				'tetaX': tetaX,
-				'tetaY': tetaY,
-				'tetaZ': tetaZ,
-
-				'easingStart': easingStart,
-				'easingDuration': easingDuration,
-				'easingStartX': startX,
-				'easingStartY': startY,
-				'easingEndX': endX,
-				'easingEndY': endY
+			this.set('_previousTick', t, {
+				forceInvalidate: force
 			});
 
-			tranformElement(this.get('el'), dx, dy, 0, tetaX, tetaY, tetaZ);
+			return this;
+	    },
+
+	    easing: function(t, p, easing) {
+	    	var count = this.get('count'),
+	    		delta = Easing.linear(
+	    			easing.startX,
+	    			easing.startY,
+	    			easing.endX,
+	    			easing.endY,
+	    			t - easing.start,
+	    			easing.duration
+	    		);
+
+	    	p.x = delta.x;
+	    	p.y = delta.y;
+
+			/*
+	    	p.alpha += 1 * speed;
+			p.teta += 1 * speed;
+			p.phi += 1 * speed;	
+	
+			if(p.alpha > TWO_PI) p.alpha -= TWO_PI;
+			if(p.teta > TWO_PI) p.teta -= TWO_PI;
+			if(p.phi > TWO_PI) p.phi -= TWO_PI;
+			*/
+
+			return t < easing.start + easing.duration;
+	    },
+
+	    onresize: function(width, height) {
+	    	var p = this.get('position'),
+	    		easing = this.get('easing'),
+	    		picPerLine = parseInt(width / PIC_WIDTH),
+	    		space = (width - PIC_WIDTH * picPerLine) / (picPerLine + 1),
+	    		count = this.get('count');
+
+	    	easing.start = this.get('_previousTick');
+	    	easing.duration = 5000;
+			easing.startX = p.x;
+			easing.startY = p.y;
+			easing.endX = space + (count % picPerLine) * (PIC_WIDTH + space);
+			easing.endY = 10 + parseInt(count / picPerLine) * (PIC_HEIGHT + 10);
 
 			this.invalidate();
-
-			return this;
-	    }
+    	}
 	});
 
     return Particule;

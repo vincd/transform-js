@@ -11,11 +11,11 @@ require([
 	'utils/timer',
 	'utils/random'
 ], function(Particule, Timer, Random) {
-	var squares = [];
+	var NUMBER_PARTICULE = 30;
 
-	for(var i=0, j=5; i<j; i++) {
-		Timer.timeOut(function() { 
+	for(var i=0; i < NUMBER_PARTICULE; i++) {
+		//Timer.timeOut(function() { 
 				new Particule();
-			}, Random.number(0, 1000));
+		//	}, Random.number(0, 1000));
 	}
 });

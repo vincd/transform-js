@@ -1,8 +1,8 @@
 define([], function() {
-	return function(el, deltaX, deltaY, deltaZ, tetaX, tetaY, tetaZ) {
-		var cx = Math.cos(tetaX), sx = Math.sin(tetaX),
-			cy = Math.cos(tetaY), sy = Math.sin(tetaY),
-			cz = Math.cos(tetaZ), sz = Math.sin(tetaZ),
+	return function(el, x, y, z, alpha, teta, phi) {
+		var cx = Math.cos(alpha), sx = Math.sin(alpha),
+			cy = Math.cos(teta), sy = Math.sin(teta),
+			cz = Math.cos(phi), sz = Math.sin(phi),
 
 			cxsz = cx * sz, 
 			cxcz = cx * cz, 
@@ -14,7 +14,7 @@ define([], function() {
 				cy * cz, -1 * cy * sz, sy, 0,
 				sy * czsx + cxsz, -1 * sy * sxsz + cxcz, -1 * sx * cy, 0,
 				-1 * sy * cxcz + sxsz, sy * cxsz + czsx, cx * cy, 0,
-				deltaX, deltaY, deltaZ, 1
+				x, y, z, 1
 			].join(", ") + ")";
 	}
 });
