@@ -10,13 +10,8 @@ define([
 		}
 	};
 
-	var linear = function(x1, y1, x2, y2, t, duration) {
-		t = 1.0 * Math.min(t, duration) / duration;
-
-		return {
-			x: x1 + (x2-x1) * t,
-			y: y1 + (y2-y1) * t
-		}
+	var linear = function(a, b, t) {
+		return a + (b-a) * t;
 	}
 
 	var ellipse = function(cx, cy, a, b, t, duration) {

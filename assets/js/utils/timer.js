@@ -29,11 +29,13 @@ define([
 	}
 
 	var registeredCallbacks = [];
+	var lastTick = 0;
 	var registerNextFrame = function(callback, context) {
 		registeredCallbacks.push(function(t) { callback.call(context, t); });
 	}
 
 	frame(function(t) {
+		lastTick = t;
 		var c = registeredCallbacks;
 		registeredCallbacks = [];
 		
@@ -41,6 +43,10 @@ define([
 			c.shift()(t);
 		}
 	});
+
+	var getLastTick = function() {
+		return lastTick;
+	}
 
 	var timeOut = function(callback, ms) {
 		setTimeout(callback, ms);
@@ -50,6 +56,7 @@ define([
 		frame: frame,
 		nextFrame: nextFrame,
 		registerNextFrame: registerNextFrame,
+		getLastTick: getLastTick,
 		timeOut: timeOut
 	};
 });
