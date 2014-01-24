@@ -13,13 +13,10 @@ define([
         };
 
 	var frame = function(callback) {
-		var _start,
-			_callback = function(timestamp) {
-				if(!_start) _start = timestamp;
-
-				callback(timestamp - _start);
-				requestAnimationFrame(_callback);
-			};
+		var _callback = function(timestamp) {
+			callback(timestamp);
+			requestAnimationFrame(_callback);
+		};
 
 		requestAnimationFrame(_callback);
 	};

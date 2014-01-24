@@ -9,9 +9,10 @@ requirejs.config({
 require([
 	'particule',
 ], function(Particule, Timer, Random) {
-	var NUMBER_PARTICULE = 30;
+	var NUMBER_PARTICULE = 30,
+		i=0;
 
-	for(var i=0; i < NUMBER_PARTICULE; i++) {
-		new Particule();
+	while(i < NUMBER_PARTICULE) {
+		new Particule(i++);
 	}
 });

@@ -12,7 +12,6 @@ define([
 		};
 
 		this.initialize.apply(this, arguments);
-		this.invalidate();
 	}
 
 	_.extend(Model.prototype, Events);
@@ -46,7 +45,7 @@ define([
 			}	
 		}, this);
 
-		if(options.forceInvalidate) this.invalidate();
+		if(options.force) this.invalidate();
 
 		return this;
 	};

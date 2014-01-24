@@ -9,60 +9,45 @@ define([
 	'utils/timer'
 ], function(_, Model, Random, w, tranformElement, Matrix, Easing, Timer) {
 	var PIC_HEIGHT = 170,
-		PIC_WIDTH = 125;
+		PIC_WIDTH = 125,
+		SPACE = 0;
 
-	var count = 0;
-
-	var zGenerator = function(nbRow, zMax, zMin) {
-		var a = Math.PI / (nbRow + 5);
-
-		return function(x) {
-			return zMax + (zMin - zMax) * Math.sin(a * (x + 2.5));
-		}
+	var xGenerator = function(row, nbRow, xMax, xMin) {
+		var offset = (w.width - nbRow * PIC_WIDTH) / (nbRow + 1);
+		return 0.5 * (xMax - xMin) * (1 - Math.cos(Math.PI * (row) / (nbRow)));
 	}
 
-	var xGenerator = function(nbRow, xMax, xMin) {
-		var a = Math.PI / (nbRow + 5);
-
-		return function(x) {
-			var d = Math.cos(a * (x + 2.5));
-			d = -0.5 * d + 0.5;
-
-			return (xMax - xMin) * d;
-		}
+	var yGenerator = function(line, nbRow) {
+		return 10 + parseInt(line) * (PIC_HEIGHT + 10);
 	}
 
-	var tetaGenerator = function(nbRow) {
-		return function(x) {
-			return -0.21 * (x - nbRow * 0.5);			
-		}
+	var zGenerator = function(row, nbRow, zMax, zMin) {
+		return zMax + (zMin - zMax) * Math.sin(Math.PI * (row) / (nbRow));
 	}
 
-	var z = zGenerator(9, 0, -550);
-	var x = xGenerator(9, w.width, 0);
-	var teta = tetaGenerator(9);
+	var tetaGenerator = function(row, nbRow) {
+		return -0.314 * (row - nbRow * 0.5);	
+	}
 
 	var Particule = Model.extend({
-		initialize: function() {
-			var container = document.getElementById('container');
-			var item = document.createElement('div');
-			var text = document.createElement('div');
-			var c = count++;
-			var picPerLine = parseInt(w.width / PIC_WIDTH),
-				space = (w.width - PIC_WIDTH * picPerLine) / (picPerLine + 1),
-				row = c % picPerLine;
+		initialize: function(count) {
+			var container = document.getElementById('container'),
+				item = document.createElement('div'),
+				text = document.createElement('div');
 
 			item.className = "surface periodic-item";
 			item.style['background-color'] = Random.color();
 			text.className = "symbol";
-			text.appendChild(document.createTextNode(c));
+			text.appendChild(document.createTextNode(count));
 
 			item.appendChild(text);
 			container.appendChild(item);
 
 			this.set({
 				el: item,
-				count: c,
+				count: count,
+
+				matrix: Matrix.identity,
 
 				position: {
 					x: 0,
@@ -71,103 +56,85 @@ define([
 					alpha: 0,
 					teta: 0,
 					phi: 0			
-				},
-				easing: {
-					start: 0,
-					duration: 2000,
-					finish: false,
-					
-					startX: 0,
-					startY: 0,
-					startZ: 0,
-					startTeta: 0,
-					
-					endX: x(row),
-					endY: 10 + parseInt(c / picPerLine) * (PIC_HEIGHT + 10),
-					endZ: z(row),
-					endTeta: teta(row)
 				}
 			});
 
-			w.on('resize', _.bind(this.onresize, this));
+			// events
+			w.on('resize', _.bind(this.setPosition, this));
 			item.addEventListener('click', _.bind(this.onclick, this));
 
+			// set the start position
+			this.setPosition();
+
 			return this;
 		},
 
-		render: function(t) {	
+		render: function() {	
+			return this;
+		},
+
+		setPosition: function() {
 			var p = this.get('position'),
-				force = !this.easing(t, p, this.get('easing'));
+				row = this.get('count'),
+				picPerLine = parseInt(w.width / (PIC_WIDTH + SPACE)),
+				space = (w.width - PIC_WIDTH * picPerLine) / (picPerLine + 1);
 
-			var m = Matrix.multiply(Matrix.rotationY(p.teta), Matrix.translate(p.x, p.y, p.z));
+			var e = {
+				duration: 2000,
+				fn: (function(that, startX, endX, startY, endY, startZ, endZ, startTeta, endTeta) {
+						var el = that.get('el'),
+							p = that.get('position');
 
-			tranformElement(this.get('el'), m);
+						return _.bind(function(t) {
+							p.x = startX + (endX - startX) * Easing.ease.linear(t);
+							p.y = startY + (endY - startY) * Easing.ease.linear(t);
+							p.z = startZ + (endZ - startZ) * Easing.ease.linear(t);
+							p.teta = startTeta + (endTeta - startTeta) * Easing.ease.linear(t);
 
-			this.set('_previousTick', t, {
-				forceInvalidate: force
-			});
+							var m = Matrix.multiply(Matrix.rotationY(p.teta), Matrix.translate(p.x, p.y, p.z));
 
-			return this;
-		},
+							tranformElement(el, m);
+					}, that);
+				})(
+				this, 
+				p.x, xGenerator(row % picPerLine, picPerLine, w.width, 0), 
+				p.y, yGenerator(row / picPerLine),
+				p.z, zGenerator(row % picPerLine, picPerLine - 1, -100, -550),
+				p.teta, tetaGenerator(row % picPerLine, picPerLine - 1))
+			};
 
-		easing: function(t, p, easing) {
-			t = 1.0 * Math.min(t - easing.start, easing.duration) / easing.duration,
-
-			p.x = Easing.linear(easing.startX, easing.endX, t);
-			p.y = Easing.linear(easing.startY, easing.endY, t);
-			p.z = Easing.linear(easing.startZ, easing.endZ, t);
-			p.teta = Easing.linear(easing.startTeta, easing.endTeta, t);
-
-			if(p.x == easing.endX) easing.startX = p.x;
-			if(p.y == easing.endY) easing.startY = p.y;
-			if(p.z == easing.endZ) easing.startZ = p.z;
-			if(p.teta == easing.endTeta) easing.startTeta = p.teta;
-
-			easing.finish = t == 1;
-
-			return easing.finish;
-		},
-
-		onresize: function(width, height) {
-			var p = this.get('position'),
-				easing = this.get('easing'),
-				picPerLine = parseInt(width / PIC_WIDTH),
-				space = (width - PIC_WIDTH * picPerLine) / (picPerLine + 1),
-				count = this.get('count'),
-				zFn = zGenerator(picPerLine-1, 0, -520),
-				xFn = xGenerator(picPerLine-1, width, 0),
-				tetaFn = tetaGenerator(picPerLine-1);
-
-			easing.duration = 1000;
-			easing.start = Timer.getLastTick();
-			easing.finish = false;
-
-			easing.startX = p.x;
-			easing.startY = p.y;
-			easing.startZ = p.z;
-			easing.startTeta = p.teta;
-
-			easing.endX = xFn(count % picPerLine);
-			easing.endY = 10 + parseInt(count / picPerLine) * (PIC_HEIGHT + 10);
-			easing.endZ = zFn(count % picPerLine);
-			easing.endTeta = tetaFn(count % picPerLine);
-
-			this.invalidate();
-
-			return this;
+			Easing.registerEasing(e);
 		},
 
 		onclick: function() {
 			var p = this.get('position'),
 				easing = this.get('easing');
 
-			easing.startTeta = p.teta;
-			easing.endTeta = p.teta + 2 * Math.PI;
-			easing.start = Timer.getLastTick();
-			easing.duration = 2000;
-			easing.finish = false;
+			var e = {
+				duration: 3000,
+				fn: (function(that, startZ, endZ, startTeta, endTeta) {
+						var el = that.get('el'),
+							p = that.get('position');
 
-			this.invalidate();
+						return _.bind(function(t) {
+							if(3 * t < 1) {
+								p.z = startZ + (endZ - startZ) * 3 * Easing.ease.linear(t);
+							} else if (3 * t > 2){
+								p.z = startZ + (endZ - startZ) * 3 * (1 - Easing.ease.linear(t));
+							}
+							p.teta = startTeta + (endTeta - startTeta) * Easing.ease.easeInOut(t);
+
+							var m = Matrix.multiply(Matrix.rotationY(p.teta), Matrix.translate(p.x, p.y, p.z));
+
+							tranformElement(el, m);
+					}, that);
+				})(
+				this, 
+				p.z, -100,
+				p.teta, p.teta + 4*Math.PI)
+			};
+
+			Easing.registerEasing(e);
 		}
 	});
 
